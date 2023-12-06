@@ -142,9 +142,15 @@ const windowOrWorkerGlobalScope = {
   [webidl.brand]: util.nonEnumerable(webidl.brand),
 };
 
-const unstableWindowOrWorkerGlobalScope = {
-  BroadcastChannel: util.nonEnumerable(broadcastChannel.BroadcastChannel),
-  WebSocketStream: util.nonEnumerable(webSocketStream.WebSocketStream),
+const unstableKeyedFeaturesForWindowOrWorkerGlobalScope = {
+  // broadcast-channel
+  1: {
+    BroadcastChannel: util.nonEnumerable(broadcastChannel.BroadcastChannel),
+  },
+  // net
+  5: {
+    WebSocketStream: util.nonEnumerable(webSocketStream.WebSocketStream),
+  },
 };
 
 class Navigator {
@@ -311,7 +317,7 @@ const workerRuntimeGlobalProperties = {
 export {
   mainRuntimeGlobalProperties,
   memoizeLazy,
-  unstableWindowOrWorkerGlobalScope,
+  unstableKeyedFeaturesForWindowOrWorkerGlobalScope,
   windowOrWorkerGlobalScope,
   workerRuntimeGlobalProperties,
 };

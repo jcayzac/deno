@@ -23,8 +23,10 @@ const {
   ObjectAssign,
   ObjectDefineProperties,
   ObjectDefineProperty,
+  ObjectKeys,
   ObjectPrototypeIsPrototypeOf,
   ObjectSetPrototypeOf,
+  ObjectValues,
   PromisePrototypeThen,
   PromiseResolve,
   SafeWeakMap,
@@ -64,7 +66,7 @@ import DOMException from "ext:deno_web/01_dom_exception.js";
 import {
   mainRuntimeGlobalProperties,
   memoizeLazy,
-  unstableWindowOrWorkerGlobalScope,
+  unstableKeyedFeaturesForWindowOrWorkerGlobalScope,
   windowOrWorkerGlobalScope,
   workerRuntimeGlobalProperties,
 } from "ext:runtime/98_global_scope.js";
@@ -434,6 +436,32 @@ let hasBootstrapped = false;
 delete globalThis.console;
 // Set up global properties shared by main and worker runtime.
 ObjectDefineProperties(globalThis, windowOrWorkerGlobalScope);
+
+// Set up global properties shared by main and worker runtime that are exposed
+// by unstable features if those are enabled.
+function exposeUnstableFeaturesForWindowOrWorkerGlobalScope(options) {
+  const { unstableFlag, unstableFeatures } = options;
+  if (unstableFlag) {
+    const all = ObjectValues(unstableKeyedFeaturesForWindowOrWorkerGlobalScope);
+    for (let i = 0; i <= all.length; i++) {
+      ObjectDefineProperties(globalThis, all[i]);
+    }
+  } else {
+    const featureIds = ObjectKeys(
+      unstableKeyedFeaturesForWindowOrWorkerGlobalScope,
+    );
+    for (let i = 0; i <= featureIds.length; i++) {
+      const featureId = featureIds[i];
+      if (ArrayPrototypeIncludes(unstableFeatures, featureId)) {
+        ObjectDefineProperties(
+          globalThis,
+          unstableKeyedFeaturesForWindowOrWorkerGlobalScope[featureId],
+        );
+      }
+    }
+  }
+}
+
 // FIXME(bartlomieju): temporarily add whole `Deno.core` to
 // `Deno[Deno.internal]` namespace. It should be removed and only necessary
 // methods should be left there.
@@ -494,9 +522,10 @@ function bootstrapMainRuntime(runtimeOptions) {
     location.setLocationHref(location_);
   }
 
-  if (unstableFlag) {
-    ObjectDefineProperties(globalThis, unstableWindowOrWorkerGlobalScope);
-  }
+  exposeUnstableFeaturesForWindowOrWorkerGlobalScope({
+    unstableFlag,
+    unstableFeatures,
+  });
   ObjectDefineProperties(globalThis, mainRuntimeGlobalProperties);
   ObjectDefineProperties(globalThis, {
     // TODO(bartlomieju): in the future we might want to change the
@@ -613,9 +642,10 @@ function bootstrapWorkerRuntime(
   delete globalThis.nodeBootstrap;
   hasBootstrapped = true;
 
-  if (unstableFlag) {
-    ObjectDefineProperties(globalThis, unstableWindowOrWorkerGlobalScope);
-  }
+  exposeUnstableFeaturesForWindowOrWorkerGlobalScope({
+    unstableFlag,
+    unstableFeatures,
+  });
   ObjectDefineProperties(globalThis, workerRuntimeGlobalProperties);
   ObjectDefineProperties(globalThis, {
     name: util.writable(name),
